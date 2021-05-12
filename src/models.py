@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from .utils import get_start_and_end_week_date
+from .utils import strip_currency_sign
 from .validators import Validator
 
 
@@ -10,11 +11,12 @@ class Customer:
         self._loads = []
 
     def add_load(self, load):
-        Validator(load, self).validate()
+        load["load_amount"] = strip_currency_sign(load["load_amount"])
 
+        Validator.validate(self, load)
         self._loads.append(load)
 
-    def filter_by_per_day(self, load_date):
+    def filter_by_date(self, load_date):
         return [
             record
             for record in self._loads
