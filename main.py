@@ -2,8 +2,8 @@ import json
 
 import click
 
-from src.app import App
-from src.utils import FileReader
+from src.parser import FileParser
+from src.storage import Storage
 
 
 @click.command()
@@ -12,11 +12,22 @@ from src.utils import FileReader
 )
 @click.argument("output", type=click.File("w+"))
 def cli(*args, **kwargs):
-    transactions = FileReader(kwargs["input"]).read()
-    app = App()
 
-    for transaction in transactions:
-        res = app.add_transaction(transaction)
-        res = json.dumps(res)
-        kwargs["output"].write(json.dumps(res))
+    db = Storage()
+    for transaction in FileParser(kwargs["input"]).parse():
+        if not transaction:
+            continue
+
+        customer = db.get_customer(transaction.customer_id) or db.add_customer(
+            transaction.customer_id
+        )
+
+        if customer.is_transaction_processed(transaction.id):
+            continue
+
+        res = customer.add_transaction(transaction)
+        res = json.dumps(res, separators=(",", ":"))
+
+        print(res)
+        kwargs["output"].write(res)
         kwargs["output"].write("\n")

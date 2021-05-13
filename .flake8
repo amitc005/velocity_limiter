@@ -14,4 +14,4 @@ ignore =
 
 
 max-complexity = 11
-max-line-length= 110
+max-line-length= 115

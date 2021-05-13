@@ -1,31 +1,31 @@
-import abc
 from abc import ABC
+from abc import abstractmethod
 
 from .constants import MAX_DAILY_LOAD_AMOUNT
 from .constants import MAX_DAILY_LOAD_NO
 from .constants import MAX_WEEKLY_LOAD_AMOUNT
 
 
-class BaseValidator(ABC):
+class BaseLimiter(ABC):
     def __init__(self, customer, transaction):
         self._customer = customer
         self._transaction = transaction
         self._customer_transactions = self.get_customer_transactions()
 
-    @abc.abstractmethod
-    def validate():
+    @abstractmethod
+    def check():
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def get_customer_transactions():
         pass
 
 
-class PerDayTransactionLimit(BaseValidator):
+class PerDayTransactionLimiter(BaseLimiter):
     def __init__(self, customer, load):
         super().__init__(customer, load)
 
-    def validate(self):
+    def check(self):
         if len(self._customer_transactions) == MAX_DAILY_LOAD_NO:
             raise ValueError(
                 f"Can not add more than 3 records for date {self._transaction.timestamp}"
@@ -35,11 +35,11 @@ class PerDayTransactionLimit(BaseValidator):
         return self._customer.get_transactions_by_date(self._transaction.timestamp)
 
 
-class PerDayTransactionAmountLimit(BaseValidator):
+class PerDayTransactionAmountLimiter(BaseLimiter):
     def __init__(self, customer, transaction):
         super().__init__(customer, transaction)
 
-    def validate(self):
+    def check(self):
         from .models import Transaction
 
         if (
@@ -52,11 +52,11 @@ class PerDayTransactionAmountLimit(BaseValidator):
         return self._customer.get_transactions_by_date(self._transaction.timestamp)
 
 
-class PerWeekTransactionAmountLimit(BaseValidator):
+class PerWeekTransactionAmountLimiter(BaseLimiter):
     def __init__(self, customer, transaction):
         super().__init__(customer, transaction)
 
-    def validate(self):
+    def check(self):
         from .models import Transaction
 
         if (
@@ -67,16 +67,3 @@ class PerWeekTransactionAmountLimit(BaseValidator):
 
     def get_customer_transactions(self):
         return self._customer.get_transactions_by_week(self._transaction.timestamp)
-
-
-class Validator:
-    __validators = [
-        PerDayTransactionLimit,
-        PerDayTransactionAmountLimit,
-        PerWeekTransactionAmountLimit,
-    ]
-
-    @classmethod
-    def validate(cls, customer, transaction):
-        for validator_cls in cls.__validators:
-            validator_cls(customer, transaction).validate()
