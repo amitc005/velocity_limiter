@@ -4,8 +4,8 @@ from decimal import Decimal
 import pytest
 
 from src.constants import DATE_FORMATE
-from src.utils import get_start_and_end_week_date
-from src.utils import normalized_load_amount
+from src.utils import get_start_and_end_week_dates
+from src.utils import normalized_input_amount
 
 
 class TestUtil:
@@ -20,7 +20,7 @@ class TestUtil:
     )
     def test_get_start_and_end_week_date(self, input_date, expected):
         input_date = datetime.strptime(input_date, DATE_FORMATE)
-        start_date, end_date = get_start_and_end_week_date(input_date)
+        start_date, end_date = get_start_and_end_week_dates(input_date)
         assert start_date
         assert end_date
         assert start_date.strftime(DATE_FORMATE) == expected[0]
@@ -31,4 +31,4 @@ class TestUtil:
         [["200.00", Decimal("200.00")], ["$200.00", Decimal("200.00")]],
     )
     def test_normalized_load_amount(self, input_value, expected_value):
-        assert normalized_load_amount(input_value) == expected_value
+        assert normalized_input_amount(input_value) == expected_value

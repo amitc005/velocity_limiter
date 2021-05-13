@@ -1,19 +1,19 @@
 # from datetime import datetime
 import pytest
 
-# from src.app import FileRepository
+# from src.app import CustomerRepository
 # from src.constants import DATE_FORMATE
 # from src.models import LoadRecord
 
 
-class TestFileRepository:
+class TestCustomerRepository:
     @pytest.fixture(autouse=True)
     def set_up(self):
         pass
 
     # def test_file_repo_constructor(self):
     #     with open("tests/extra/input.txt", "r") as input_file:
-    #         file_repo = FileRepository(input_file)
+    #         file_repo = CustomerRepository(input_file)
     #         assert file_repo
     #         output_values = file_repo.add_records()
     #         customer_562 = file_repo._customer_records["562"]

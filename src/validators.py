@@ -1,86 +1,82 @@
 import abc
 from abc import ABC
-from decimal import Decimal
 
 from .constants import MAX_DAILY_LOAD_AMOUNT
 from .constants import MAX_DAILY_LOAD_NO
 from .constants import MAX_WEEKLY_LOAD_AMOUNT
 
 
-class AbStractValidator(ABC):
-    def __init__(self, customer, load):
+class BaseValidator(ABC):
+    def __init__(self, customer, transaction):
         self._customer = customer
-        self._load = load
-        self._queried_records = self.get_query()
+        self._transaction = transaction
+        self._customer_transactions = self.get_customer_transactions()
 
     @abc.abstractmethod
     def validate():
         pass
 
     @abc.abstractmethod
-    def get_query():
+    def get_customer_transactions():
         pass
 
-    def calculate_total_amount(self):
-        return Decimal(sum([record["load_amount"] for record in self._queried_records]))
 
-
-class MaxLoadNumberValidator(AbStractValidator):
+class PerDayTransactionLimit(BaseValidator):
     def __init__(self, customer, load):
         super().__init__(customer, load)
 
     def validate(self):
-        if len(self._queried_records) == MAX_DAILY_LOAD_NO:
+        if len(self._customer_transactions) == MAX_DAILY_LOAD_NO:
             raise ValueError(
-                f"Can not add more than 3 records for date {self._load.timestamp}"
+                f"Can not add more than 3 records for date {self._transaction.timestamp}"
             )
 
-    def get_query(self):
-        return self._customer.filter_by_date(self._load.timestamp)
+    def get_customer_transactions(self):
+        return self._customer.get_transactions_by_date(self._transaction.timestamp)
 
 
-class MaxAmountValidators(AbStractValidator):
-    def __init__(self, customer, load):
-        super().__init__(customer, load)
+class PerDayTransactionAmountLimit(BaseValidator):
+    def __init__(self, customer, transaction):
+        super().__init__(customer, transaction)
 
     def validate(self):
-        from .models import LoadRecord
+        from .models import Transaction
 
         if (
-            self._load.load_amount
-            + LoadRecord.calculate_total_load_amount(self._queried_records)
+            self._transaction.amount
+            + Transaction.calculate_total_amount(self._customer_transactions)
         ) > MAX_DAILY_LOAD_AMOUNT:
             raise ValueError("Load Amount exceed to 5000")
 
-    def get_query(self):
-        return self._customer.filter_by_date(self._load.timestamp)
+    def get_customer_transactions(self):
+        return self._customer.get_transactions_by_date(self._transaction.timestamp)
 
 
-class MaxLoadWeeklyAmountValidator(AbStractValidator):
-    def __init__(self, customer, load):
-        super().__init__(customer, load)
+class PerWeekTransactionAmountLimit(BaseValidator):
+    def __init__(self, customer, transaction):
+        super().__init__(customer, transaction)
 
     def validate(self):
-        from .models import LoadRecord
+        from .models import Transaction
 
         if (
-            self._load.load_amount
-            + LoadRecord.calculate_total_load_amount(self._queried_records)
+            self._transaction.amount
+            + Transaction.calculate_total_amount(self._customer_transactions)
         ) > MAX_WEEKLY_LOAD_AMOUNT:
-            raise ValueError(f"Weekly Load Amount exceed {self._queried_records}")
+            raise ValueError(f"Weekly Load Amount exceed {self._customer_transactions}")
 
-    def get_query(self):
-        return self._customer.filter_by_week(self._load.timestamp)
+    def get_customer_transactions(self):
+        return self._customer.get_transactions_by_week(self._transaction.timestamp)
 
 
 class Validator:
     __validators = [
-        MaxLoadNumberValidator,
-        MaxAmountValidators,
-        MaxLoadWeeklyAmountValidator,
+        PerDayTransactionLimit,
+        PerDayTransactionAmountLimit,
+        PerWeekTransactionAmountLimit,
     ]
 
     @classmethod
-    def validate(cls, customer, load):
+    def validate(cls, customer, transaction):
         for validator_cls in cls.__validators:
-            validator_cls(customer, load).validate()
+            validator_cls(customer, transaction).validate()

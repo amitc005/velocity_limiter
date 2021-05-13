@@ -38,7 +38,7 @@ class TestCustomer:
             self.customer.add_load(load_record)
 
         load_date = datetime.strptime("2000-01-01T00:00:00Z", DATE_FORMATE)
-        result = self.customer.filter_by_date(load_date)
+        result = self.customer.get_transactions_by_date(load_date)
         assert isinstance(result, list)
         assert len(result) == 2
 
@@ -50,7 +50,7 @@ class TestCustomer:
                 "time": "2000-01-01T01:01:22Z",
             },
         )
-        result = self.customer.filter_by_date(load_date)
+        result = self.customer.get_transactions_by_date(load_date)
         assert isinstance(result, list)
         assert len(result) == 3
 
@@ -91,7 +91,7 @@ class TestCustomer:
             self.customer.add_load(load_record)
 
         load_date = datetime.strptime("2021-01-04T02:02:44Z", DATE_FORMATE)
-        result = self.customer.filter_by_week(load_date)
+        result = self.customer.get_transaction_by_week(load_date)
         assert isinstance(result, list)
         assert len(result) == 4
 
