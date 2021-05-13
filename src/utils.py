@@ -11,7 +11,7 @@ def get_start_and_end_week_date(current_date):
     )
 
 
-def strip_currency_sign(amount):
+def normalized_load_amount(amount):
     if amount[:1] == "$":
         return Decimal(amount[1:])
 

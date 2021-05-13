@@ -1,6 +1,5 @@
 import abc
 from abc import ABC
-from datetime import datetime
 from decimal import Decimal
 
 from .constants import MAX_DAILY_LOAD_AMOUNT
@@ -12,7 +11,6 @@ class AbStractValidator(ABC):
     def __init__(self, customer, load):
         self._customer = customer
         self._load = load
-        self._load_date = datetime.strptime(load["time"], "%Y-%m-%dT%H:%M:%SZ")
         self._queried_records = self.get_query()
 
     @abc.abstractmethod
@@ -34,11 +32,11 @@ class MaxLoadNumberValidator(AbStractValidator):
     def validate(self):
         if len(self._queried_records) == MAX_DAILY_LOAD_NO:
             raise ValueError(
-                f"Can not add more than 3 records for date {self._load_date}"
+                f"Can not add more than 3 records for date {self._load.timestamp}"
             )
 
     def get_query(self):
-        return self._customer.filter_by_date(self._load_date)
+        return self._customer.filter_by_date(self._load.timestamp)
 
 
 class MaxAmountValidators(AbStractValidator):
@@ -46,13 +44,16 @@ class MaxAmountValidators(AbStractValidator):
         super().__init__(customer, load)
 
     def validate(self):
+        from .models import LoadRecord
+
         if (
-            self._load["load_amount"] + self.calculate_total_amount()
+            self._load.load_amount
+            + LoadRecord.calculate_total_load_amount(self._queried_records)
         ) > MAX_DAILY_LOAD_AMOUNT:
             raise ValueError("Load Amount exceed to 5000")
 
     def get_query(self):
-        return self._customer.filter_by_date(self._load_date)
+        return self._customer.filter_by_date(self._load.timestamp)
 
 
 class MaxLoadWeeklyAmountValidator(AbStractValidator):
@@ -60,13 +61,16 @@ class MaxLoadWeeklyAmountValidator(AbStractValidator):
         super().__init__(customer, load)
 
     def validate(self):
+        from .models import LoadRecord
+
         if (
-            self._load["load_amount"] + self.calculate_total_amount()
+            self._load.load_amount
+            + LoadRecord.calculate_total_load_amount(self._queried_records)
         ) > MAX_WEEKLY_LOAD_AMOUNT:
-            raise ValueError("Weekly Load Amount exceed")
+            raise ValueError(f"Weekly Load Amount exceed {self._queried_records}")
 
     def get_query(self):
-        return self._customer.filter_by_week(self._load_date)
+        return self._customer.filter_by_week(self._load.timestamp)
 
 
 class Validator:
