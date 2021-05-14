@@ -25,7 +25,7 @@ Velocity Limiter is a Python package which accept input files with customer load
 3. Install the project locally.
 
    ```
-   pip install -editable .
+   pip install --editable .
 
    ```
 
