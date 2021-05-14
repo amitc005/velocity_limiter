@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from src.constants import DATE_FORMATE
+from src.constants import UTC_DATE_TIME_FORMAT
 from src.models import Transaction
 from src.parser import FileParser
 
@@ -43,7 +43,7 @@ class TestFileParser:
                 assert transaction.customer_id == input_data["customer_id"]
                 assert transaction.amount == Decimal(input_data["load_amount"][1:])
                 assert transaction.timestamp == datetime.strptime(
-                    input_data["time"], DATE_FORMATE
+                    input_data["time"], UTC_DATE_TIME_FORMAT
                 )
 
     @pytest.mark.parametrize(
@@ -88,5 +88,5 @@ class TestFileParser:
                 assert transaction.customer_id == input_data["customer_id"]
                 assert transaction.amount == Decimal(input_data["load_amount"])
                 assert transaction.timestamp == datetime.strptime(
-                    input_data["time"], DATE_FORMATE
+                    input_data["time"], UTC_DATE_TIME_FORMAT
                 )

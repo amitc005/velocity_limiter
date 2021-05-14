@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from src.constants import DATE_FORMATE
+from src.constants import UTC_DATE_TIME_FORMAT
 from src.utils import get_start_and_end_week_dates
 from src.utils import normalized_input_amount
 
@@ -19,12 +19,12 @@ class TestUtil:
         ],
     )
     def test_get_start_and_end_week_date(self, input_date, expected):
-        input_date = datetime.strptime(input_date, DATE_FORMATE)
+        input_date = datetime.strptime(input_date, UTC_DATE_TIME_FORMAT)
         start_date, end_date = get_start_and_end_week_dates(input_date)
         assert start_date
         assert end_date
-        assert start_date.strftime(DATE_FORMATE) == expected[0]
-        assert end_date.strftime(DATE_FORMATE) == expected[1]
+        assert start_date.strftime(UTC_DATE_TIME_FORMAT) == expected[0]
+        assert end_date.strftime(UTC_DATE_TIME_FORMAT) == expected[1]
 
     @pytest.mark.parametrize(
         "input_value, expected_value",

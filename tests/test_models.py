@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from src.constants import DATE_FORMATE
+from src.constants import UTC_DATE_TIME_FORMAT
 from src.models import Customer
 
 
@@ -42,7 +42,7 @@ class TestCustomer:
             assert res["customer_id"] == data["customer_id"]
             assert res["accepted"] is True
 
-        txn_date = datetime.strptime("2000-01-01T00:00:00Z", DATE_FORMATE)
+        txn_date = datetime.strptime("2000-01-01T00:00:00Z", UTC_DATE_TIME_FORMAT)
         result = self.customer.get_transactions_by_date(txn_date)
         assert isinstance(result, list)
         assert len(result) == 2
@@ -90,7 +90,7 @@ class TestCustomer:
             assert res["customer_id"] == data["customer_id"]
             assert res["accepted"] is True
 
-        load_date = datetime.strptime("2021-01-04T02:02:44Z", DATE_FORMATE)
+        load_date = datetime.strptime("2021-01-04T02:02:44Z", UTC_DATE_TIME_FORMAT)
         result = self.customer.get_transactions_by_week(load_date)
         assert isinstance(result, list)
         assert len(result) == 4
