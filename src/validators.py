@@ -10,6 +10,7 @@ from .constants import UTC_DATE_TIME_FORMAT
 from .exceptions import DailyTransactionAmountException
 from .exceptions import DailyTransactionLimitException
 from .exceptions import WeeklyTransactionAmountException
+from .utils import week_date_range
 
 
 class BaseLimiter(ABC):
@@ -29,10 +30,10 @@ class PerDayTransactionLimiter(BaseLimiter):
     def check(self):
         from main import storage
 
-        cache_data = storage.customer_cache.find_cache_by_date(
-            self._customer, self._transaction.timestamp
+        _, total_count = storage.customer_cache.get(
+            self._customer.customer_id, self._transaction.timestamp
         )
-        if len(cache_data) >= MAX_DAILY_LOAD_NO:
+        if total_count >= MAX_DAILY_LOAD_NO:
             raise DailyTransactionLimitException(
                 f"Can not add more than 3 records for date {self._transaction.timestamp}"
             )
@@ -45,14 +46,11 @@ class PerDayTransactionAmountLimiter(BaseLimiter):
     def check(self):
         from main import storage
 
-        cache_data = storage.customer_cache.find_cache_by_date(
-            self._customer.customer_id, self._transaction.timestamp.date()
+        total_amount, _ = storage.customer_cache.get(
+            self._customer.customer_id, self._transaction.timestamp
         )
 
-        total_transaction_amount = sum([Decimal(amount) for amount in cache_data])
-        if (
-            self._transaction.amount + total_transaction_amount
-        ) > MAX_DAILY_LOAD_AMOUNT:
+        if (self._transaction.amount + Decimal(total_amount)) > MAX_DAILY_LOAD_AMOUNT:
             raise DailyTransactionAmountException("Load Amount exceed to 5000")
 
 
@@ -63,15 +61,13 @@ class PerWeekTransactionAmountLimiter(BaseLimiter):
     def check(self):
         from main import storage
 
-        cache_data = storage.customer_cache.find_cache_by_week(
-            self._customer.customer_id, self._transaction.timestamp.date()
-        )
+        amount_list = []
+        for date in week_date_range(self._transaction.timestamp.date()):
+            amount, _ = storage.customer_cache.get(self._customer.customer_id, date)
+            if amount:
+                amount_list.append(Decimal(amount))
 
-        total_transaction_amount = sum([Decimal(amount) for amount in cache_data])
-
-        if (
-            self._transaction.amount + total_transaction_amount
-        ) > MAX_WEEKLY_LOAD_AMOUNT:
+        if (self._transaction.amount + sum(amount_list)) > MAX_WEEKLY_LOAD_AMOUNT:
             raise WeeklyTransactionAmountException(
                 f"Weekly Load Amount exceed {self._customer_transactions}"
             )

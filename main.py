@@ -1,4 +1,7 @@
 import json
+import logging
+import sys
+import traceback
 
 import click
 
@@ -6,6 +9,9 @@ from src.storage import ApplicationStorage
 from src.validators import TransactionInputValidator
 
 storage = ApplicationStorage()
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.FileHandler("error_log.log", mode="w+"))
 
 
 @click.command()
@@ -22,5 +28,10 @@ def cli(*args, **kwargs):
             res = json.dumps(res, separators=(",", ":"))
             kwargs["output"].write(res)
             kwargs["output"].write("\n")
+
         except Exception:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            logger.error(
+                repr(traceback.format_exception(exc_type, exc_value, exc_traceback))
+            )
             continue

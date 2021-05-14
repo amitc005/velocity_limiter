@@ -1,14 +1,15 @@
+from decimal import Decimal
+
 from .exceptions import TransactionException
 from .models import Customer
 from .models import Transaction
-from .utils import week_date_range_generator
 
 
 class ApplicationStorage:
     def __init__(self):
         self._customer_records = {}
         self._customer_transaction_list = []
-        self.customer_cache = CustomerCache()
+        self.customer_cache = CustomerCacheStorage()
 
     def get_customer(self, customer_id):
         return self._customer_records.get(customer_id)
@@ -33,7 +34,7 @@ class ApplicationStorage:
 
             self._customer_transaction_list.append(transaction_key)
             customer.perform_transaction(transaction)
-            self.customer_cache.update_cache(customer, transaction)
+            self.customer_cache.update(customer, transaction)
 
             return {
                 "id": data["id"],
@@ -49,37 +50,40 @@ class ApplicationStorage:
             }
 
 
-class CustomerCache:
+class CustomerCacheStorage:
     DATE_FORMAT = "%Y%m%d"
 
     def __init__(self):
         self._cache_data = {}
 
-    def update_cache(self, customer, transaction):
-        customer_cache = self._cache_data.get(customer.customer_id)
-        date = transaction.timestamp.date().strftime(self.DATE_FORMAT)
-
-        if not customer_cache:
-            self._cache_data[customer.customer_id] = {date: [str(transaction.amount)]}
-        else:
-            customer_cache[date] = customer_cache.get(date, []) + [
-                str(transaction.amount)
-            ]
-
-    def find_cache_by_date(self, customer_id, date):
-        return (
-            self._cache_data[customer_id].get(date.strftime(self.DATE_FORMAT), [])
-            if self._cache_data.get(customer_id)
-            else []
-        )
-
-    def find_cache_by_week(self, customer_id, date):
+    def update(self, customer, transaction):
+        date_key = transaction.timestamp.date().strftime(self.DATE_FORMAT)
+        customer_id = customer.customer_id
+        amount = transaction.amount
         customer_cache = self._cache_data.get(customer_id)
-        result = []
+
         if not customer_cache:
-            return result
+            self._cache_data[customer_id] = {date_key: (str(amount), 1)}
 
-        for week_date in week_date_range_generator(date):
-            result += customer_cache.get(week_date.strftime(self.DATE_FORMAT), [])
+        elif not customer_cache.get(date_key):
+            customer_cache[date_key] = (str(amount), 1)
 
-        return result
+        else:
+            old_total_amount, old_count = self._cache_data[customer.customer_id][
+                date_key
+            ]
+            new_total_amount, new_count = (
+                amount + Decimal(old_total_amount),
+                old_count + 1,
+            )
+            customer_cache[date_key] = (str(new_total_amount), new_count)
+
+    def get(self, customer_id, date):
+        customer_cache = self._cache_data.get(customer_id)
+        key = date.strftime(self.DATE_FORMAT)
+
+        if not customer_cache or not customer_cache.get(key):
+            return 0, 0
+
+        else:
+            return customer_cache[key]

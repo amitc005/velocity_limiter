@@ -2,10 +2,11 @@ from datetime import datetime
 from decimal import Decimal
 
 from src.constants import UTC_DATE_TIME_FORMAT
-from src.utils import get_start_and_end_week_dates
 from src.validators import PerDayTransactionAmountLimiter
 from src.validators import PerDayTransactionLimiter
 from src.validators import PerWeekTransactionAmountLimiter
+
+# from src.utils import get_start_and_end_week_dates
 
 
 class Customer:
@@ -30,20 +31,20 @@ class Customer:
         self._validate_transaction(transaction)
         self._transactions[transaction.id] = transaction
 
-    def get_transactions_by_date(self, query_date):
-        return [
-            record
-            for record in self._transactions.values()
-            if query_date.date() == record.timestamp.date()
-        ]
+    # def get_transactions_by_date(self, query_date):
+    #     return [
+    #         record
+    #         for record in self._transactions.values()
+    #         if query_date.date() == record.timestamp.date()
+    #     ]
 
-    def get_transactions_by_week(self, query_date):
-        start_date, end_date = get_start_and_end_week_dates(query_date)
-        return [
-            record
-            for record in self._transactions.values()
-            if record.timestamp >= start_date and record.timestamp <= end_date
-        ]
+    # def get_transactions_by_week(self, query_date):
+    #     start_date, end_date = get_start_and_end_week_dates(query_date)
+    #     return [
+    #         record
+    #         for record in self._transactions.values()
+    #         if record.timestamp >= start_date and record.timestamp <= end_date
+    #     ]
 
 
 class Transaction(object):
