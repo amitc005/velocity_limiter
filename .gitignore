@@ -96,4 +96,4 @@ logs/
 
 # for auto env
 .autoenv*
-
+test_output.txt

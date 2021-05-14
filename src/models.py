@@ -18,33 +18,19 @@ class Customer:
 
     def __init__(self, customer_id):
         self.customer_id = customer_id
-        self._transactions = {}
+        self._transactions = []
 
     def _validate_transaction(self, transaction):
         for checker_cls in self.__limiter_list:
-            checker_cls(self, transaction).check()
-
-    def is_transaction_processed(self, id):
-        return id in self._transactions or id in self._rejected_transaction_ids
+            checker_cls(self, transaction).validate()
 
     def perform_transaction(self, transaction):
         self._validate_transaction(transaction)
-        self._transactions[transaction.id] = transaction
+        self._transactions.append(transaction)
 
-    # def get_transactions_by_date(self, query_date):
-    #     return [
-    #         record
-    #         for record in self._transactions.values()
-    #         if query_date.date() == record.timestamp.date()
-    #     ]
-
-    # def get_transactions_by_week(self, query_date):
-    #     start_date, end_date = get_start_and_end_week_dates(query_date)
-    #     return [
-    #         record
-    #         for record in self._transactions.values()
-    #         if record.timestamp >= start_date and record.timestamp <= end_date
-    #     ]
+    @property
+    def transaction_list(self):
+        return self._transactions
 
 
 class Transaction(object):

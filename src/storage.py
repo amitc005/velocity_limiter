@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from .exceptions import DuplicateCustomerException
+from .exceptions import DuplicateTransactionException
 from .exceptions import TransactionException
 from .models import Customer
 from .models import Transaction
@@ -8,33 +10,35 @@ from .models import Transaction
 class ApplicationStorage:
     def __init__(self):
         self._customer_records = {}
-        self._customer_transaction_list = []
-        self.customer_cache = CustomerCacheStorage()
+        self._processed_transaction = []
 
     def get_customer(self, customer_id):
         return self._customer_records.get(customer_id)
 
     def add_customer(self, customer_id):
         if self._customer_records.get(customer_id):
-            raise ValueError("Duplicate Customer.")
+            raise DuplicateCustomerException(f"Duplicate customer ID: {customer_id}")
 
         self._customer_records[customer_id] = Customer(customer_id)
         return self._customer_records[customer_id]
 
-    def add_transaction(self, data):
+    def _verify_key(self, key):
+        if key in self._processed_transaction:
+            raise DuplicateTransactionException(f"Transaction already processed: {key}")
+
+    def _add_process_key(self, key):
+        self._verify_key(key)
+        self._processed_transaction.append(key)
+
+    def add_transaction(self, data, customer):
+        from main import aggregated_storage
+
         try:
             transaction = Transaction(data)
-            customer = self.get_customer(transaction.customer_id) or self.add_customer(
-                transaction.customer_id
-            )
-
-            transaction_key = f"{customer.customer_id}:{transaction.id}"
-            if transaction_key in self._customer_transaction_list:
-                raise ValueError(f"Duplicate Transaction Key: {transaction_key}")
-
-            self._customer_transaction_list.append(transaction_key)
+            process_key = f"{customer.customer_id}:{transaction.id}"
+            self._add_process_key(process_key)
             customer.perform_transaction(transaction)
-            self.customer_cache.update(customer, transaction)
+            aggregated_storage.update(customer.customer_id, transaction)
 
             return {
                 "id": data["id"],
@@ -50,40 +54,36 @@ class ApplicationStorage:
             }
 
 
-class CustomerCacheStorage:
+class CustomerAggregatedStorage:
     DATE_FORMAT = "%Y%m%d"
 
     def __init__(self):
-        self._cache_data = {}
+        self._data = {}
 
-    def update(self, customer, transaction):
-        date_key = transaction.timestamp.date().strftime(self.DATE_FORMAT)
-        customer_id = customer.customer_id
+    def update(self, customer_id, transaction):
+        key = transaction.timestamp.date().strftime(self.DATE_FORMAT)
         amount = transaction.amount
-        customer_cache = self._cache_data.get(customer_id)
 
-        if not customer_cache:
-            self._cache_data[customer_id] = {date_key: (str(amount), 1)}
+        data = self._data.get(customer_id)
 
-        elif not customer_cache.get(date_key):
-            customer_cache[date_key] = (str(amount), 1)
+        if not data:
+            self._data[customer_id] = {key: (str(amount), 1)}
+
+        elif not data.get(key):
+            data[key] = (str(amount), 1)
 
         else:
-            old_total_amount, old_count = self._cache_data[customer.customer_id][
-                date_key
-            ]
+            total_amount, total_count = self._data[customer_id][key]
             new_total_amount, new_count = (
-                amount + Decimal(old_total_amount),
-                old_count + 1,
+                amount + Decimal(total_amount),
+                total_count + 1,
             )
-            customer_cache[date_key] = (str(new_total_amount), new_count)
+            data[key] = (str(new_total_amount), new_count)
 
     def get(self, customer_id, date):
-        customer_cache = self._cache_data.get(customer_id)
+        customer_cache = self._data.get(customer_id)
         key = date.strftime(self.DATE_FORMAT)
-
         if not customer_cache or not customer_cache.get(key):
             return 0, 0
 
-        else:
-            return customer_cache[key]
+        return customer_cache[key]

@@ -3,10 +3,13 @@ from abc import abstractmethod
 from datetime import datetime
 from decimal import Decimal
 
+from .constants import DAILY_LOAD_AMOUNT_LIMIT_ERROR
+from .constants import DAILY_NO_LOAD_LIMIT_ERROR
 from .constants import MAX_DAILY_LOAD_AMOUNT
 from .constants import MAX_DAILY_LOAD_NO
 from .constants import MAX_WEEKLY_LOAD_AMOUNT
 from .constants import UTC_DATE_TIME_FORMAT
+from .constants import WEEKLY_LOAD_AMOUNT_LIMIT_ERROR
 from .exceptions import DailyTransactionAmountException
 from .exceptions import DailyTransactionLimitException
 from .exceptions import WeeklyTransactionAmountException
@@ -19,23 +22,23 @@ class BaseLimiter(ABC):
         self._transaction = transaction
 
     @abstractmethod
-    def check():
+    def validate():
         pass
 
 
 class PerDayTransactionLimiter(BaseLimiter):
-    def __init__(self, customer, load):
-        super().__init__(customer, load)
+    def __init__(self, customer, transaction):
+        super().__init__(customer, transaction)
 
-    def check(self):
-        from main import storage
+    def validate(self):
+        from main import aggregated_storage
 
-        _, total_count = storage.customer_cache.get(
+        _, total_count = aggregated_storage.get(
             self._customer.customer_id, self._transaction.timestamp
         )
         if total_count >= MAX_DAILY_LOAD_NO:
             raise DailyTransactionLimitException(
-                f"Can not add more than 3 records for date {self._transaction.timestamp}"
+                DAILY_NO_LOAD_LIMIT_ERROR % self._transaction.timestamp
             )
 
 
@@ -43,34 +46,31 @@ class PerDayTransactionAmountLimiter(BaseLimiter):
     def __init__(self, customer, transaction):
         super().__init__(customer, transaction)
 
-    def check(self):
-        from main import storage
+    def validate(self):
+        from main import aggregated_storage
 
-        total_amount, _ = storage.customer_cache.get(
+        total_amount, _ = aggregated_storage.get(
             self._customer.customer_id, self._transaction.timestamp
         )
-
         if (self._transaction.amount + Decimal(total_amount)) > MAX_DAILY_LOAD_AMOUNT:
-            raise DailyTransactionAmountException("Load Amount exceed to 5000")
+            raise DailyTransactionAmountException(DAILY_LOAD_AMOUNT_LIMIT_ERROR)
 
 
 class PerWeekTransactionAmountLimiter(BaseLimiter):
     def __init__(self, customer, transaction):
         super().__init__(customer, transaction)
 
-    def check(self):
-        from main import storage
+    def validate(self):
+        from main import aggregated_storage
 
         amount_list = []
         for date in week_date_range(self._transaction.timestamp.date()):
-            amount, _ = storage.customer_cache.get(self._customer.customer_id, date)
+            amount, _ = aggregated_storage.get(self._customer.customer_id, date)
             if amount:
                 amount_list.append(Decimal(amount))
 
         if (self._transaction.amount + sum(amount_list)) > MAX_WEEKLY_LOAD_AMOUNT:
-            raise WeeklyTransactionAmountException(
-                f"Weekly Load Amount exceed {self._customer_transactions}"
-            )
+            raise WeeklyTransactionAmountException(WEEKLY_LOAD_AMOUNT_LIMIT_ERROR)
 
 
 class TransactionInputValidator:

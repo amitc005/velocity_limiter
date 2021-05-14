@@ -14,3 +14,11 @@ class DailyTransactionAmountException(TransactionException):
 
 class WeeklyTransactionAmountException(TransactionException):
     pass
+
+
+class DuplicateCustomerException(Exception):
+    pass
+
+
+class DuplicateTransactionException(Exception):
+    pass
