@@ -1,3 +1,50 @@
+# Velocity Limiter
+
+Velocity Limiter is a Python package which accept input files with customer load transactions and out the each transaction response.
+
+## Installing
+
+### Tools requires before installation:
+
+- python 3.6+ [Download](https://www.python.org/downloads/)
+
+1. Clone the source repository and initialize the code.
+
+   ```
+   git clone https://github.com/amitc005/velocity_limiter.git
+   ```
+
+2. (Optional): creating virtual environment.
+
+   ```
+   python3 -m venv env
+   source env/bin/activate
+
+   ```
+
+3. Install the project locally.
+
+   ```
+   pip install -editable .
+
+   ```
+
+## A Simple Example
+
+1. Without console echo
+
+```
+    velocity_limiter input.txt output.txt
+
+```
+
+2. With console echo -v or --verbose
+
+```
+    velocity_limiter input.txt output.txt -v
+
+```
+
 In finance, it's common for accounts to have so-called "velocity limits". In this task, you'll write a program that accepts or declines attempts to load funds into customers' accounts in real-time.
 
 Each attempt to load funds will come as a single-line JSON payload, structured as follows:
