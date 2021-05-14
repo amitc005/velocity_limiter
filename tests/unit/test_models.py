@@ -24,7 +24,7 @@ class TestCustomer:
             {
                 "id": "15887",
                 "customer_id": "528",
-                "load_amount": "$3000.00",
+                "load_amount": "$1000.00",
                 "time": "2000-01-01T00:00:00Z",
             },
             {
