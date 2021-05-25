@@ -5,12 +5,13 @@ import traceback
 
 import click
 
-from src.storage import ApplicationStorage
+from src.handlers import TransactionHandler
 from src.storage import CustomerAggregatedStorage
-from src.validators import TransactionInputValidator
+from src.storage import CustomerStorage
+from src.storage import TransactionLogStorage
+from src.storage import TransactionStorage
+from src.utils import TransactionFileIterator
 
-storage = ApplicationStorage()
-aggregated_storage = CustomerAggregatedStorage()
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.FileHandler("error_log.log", mode="w+"))
@@ -26,28 +27,37 @@ def cli(*args, **kwargs):
     main(kwargs["input"], kwargs["output"], kwargs["verbose"])
 
 
+customer_aggregated = None
+
+
 def main(input_file, output_file, console_echo=False):
-    output_str = ""
-    for data in input_file:
+    customer_storage = CustomerStorage()
+    transaction_storage = TransactionStorage()
+    transaction_log = TransactionLogStorage()
+    customer_aggregated = CustomerAggregatedStorage()
+    transaction_handler = TransactionHandler(
+        customer_storage, transaction_storage, transaction_log, customer_aggregated
+    )
+
+    for transaction in TransactionFileIterator(input_file):
+        if not transaction:
+            continue
 
         try:
-            data = json.loads(data)
-            TransactionInputValidator(data).validate()
-            customer = storage.get_customer(data["customer_id"])
-            if not customer:
-                customer = storage.add_customer(data["customer_id"])
-            res = storage.add_transaction(data, customer)
-            output_str += f'{json.dumps(res, separators=(",", ":"))}\n'
+            customer = customer_storage.get(
+                transaction.customer_id
+            ) or customer_storage.add(transaction.customer_id)
+
+            res = transaction_handler.perform_transaction(customer, transaction)
+            formated_res = f'{json.dumps(res, separators=(",", ":"))}\n'
+            if console_echo:
+                print(formated_res)
+
+            if output_file:
+                output_file.write(formated_res)
 
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             logger.error(
                 repr(traceback.format_exception(exc_type, exc_value, exc_traceback))
             )
-            continue
-
-    if console_echo:
-        print(output_str)
-
-    if output_file:
-        output_file.write(output_str)

@@ -6,8 +6,6 @@ from src.validators import PerDayTransactionAmountLimiter
 from src.validators import PerDayTransactionLimiter
 from src.validators import PerWeekTransactionAmountLimiter
 
-# from src.utils import get_start_and_end_week_dates
-
 
 class Customer:
     __limiter_list = [
@@ -18,22 +16,16 @@ class Customer:
 
     def __init__(self, customer_id):
         self.customer_id = customer_id
-        self._transactions = []
 
-    def _validate_transaction(self, transaction):
+    def _validate_transaction(self, transaction, aggregated_data):
         for checker_cls in self.__limiter_list:
-            checker_cls(self, transaction).validate()
+            checker_cls(self, transaction).validate(aggregated_data)
 
-    def perform_transaction(self, transaction):
-        self._validate_transaction(transaction)
-        self._transactions.append(transaction)
-
-    @property
-    def transaction_list(self):
-        return self._transactions
+    def perform_transaction(self, transaction, aggregated_data):
+        self._validate_transaction(transaction, aggregated_data)
 
 
-class Transaction(object):
+class Transaction:
     def __init__(self, input_data):
         self.id = input_data["id"]
         self.customer_id = input_data["customer_id"]
@@ -46,3 +38,7 @@ class Transaction(object):
             return Decimal(amount[1:])
 
         return Decimal(amount)
+
+    @property
+    def transaction_key(self):
+        return f"{self.customer_id}:{self.id}"

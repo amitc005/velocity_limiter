@@ -1,60 +1,66 @@
+from abc import ABC
 from decimal import Decimal
 
 from .exceptions import DuplicateCustomerException
 from .exceptions import DuplicateTransactionException
-from .exceptions import TransactionException
 from .models import Customer
-from .models import Transaction
 
 
-class ApplicationStorage:
+class Storage(ABC):
+    def __init__(self):
+        pass
+
+    def add(self):
+        pass
+
+    def get(self):
+        pass
+
+    def exist(self):
+        pass
+
+    def update(self):
+        pass
+
+
+class TransactionLogStorage(Storage):
+    def __init__(self):
+        self._transaction_log = []
+
+    def add(self, key):
+        if self.exist(key):
+            raise DuplicateTransactionException(f"Transaction already processed: {key}")
+
+        self._transaction_log.append(key)
+
+    def exist(self, key):
+        return key in self._transaction_log
+
+
+class TransactionStorage(Storage):
+    def __init__(self):
+        self._transactions = {}
+
+    def add(self, transaction):
+        self._transactions[transaction.transaction_key] = transaction
+
+
+class CustomerStorage(Storage):
     def __init__(self):
         self._customer_records = {}
-        self._processed_transaction = []
 
-    def get_customer(self, customer_id):
+    def get(self, customer_id):
         return self._customer_records.get(customer_id)
 
-    def add_customer(self, customer_id):
-        if self._customer_records.get(customer_id):
+    def add(self, customer_id):
+        if self.get(customer_id):
             raise DuplicateCustomerException(f"Duplicate customer ID: {customer_id}")
 
         self._customer_records[customer_id] = Customer(customer_id)
         return self._customer_records[customer_id]
 
-    def _verify_key(self, key):
-        if key in self._processed_transaction:
-            raise DuplicateTransactionException(f"Transaction already processed: {key}")
 
-    def _add_process_key(self, key):
-        self._verify_key(key)
-        self._processed_transaction.append(key)
-
-    def add_transaction(self, data, customer):
-        from main import aggregated_storage
-
-        try:
-            transaction = Transaction(data)
-            process_key = f"{customer.customer_id}:{transaction.id}"
-            self._add_process_key(process_key)
-            customer.perform_transaction(transaction)
-            aggregated_storage.update(customer.customer_id, transaction)
-
-            return {
-                "id": data["id"],
-                "customer_id": data["customer_id"],
-                "accepted": True,
-            }
-
-        except TransactionException:
-            return {
-                "id": data.get("id"),
-                "customer_id": data.get("customer_id"),
-                "accepted": False,
-            }
-
-
-class CustomerAggregatedStorage:
+class CustomerAggregatedStorage(Storage):
     DATE_FORMAT = "%Y%m%d"
 
     def __init__(self):

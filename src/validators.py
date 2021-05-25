@@ -22,7 +22,7 @@ class BaseLimiter(ABC):
         self._transaction = transaction
 
     @abstractmethod
-    def validate():
+    def validate(customer_aggregated):
         pass
 
 
@@ -30,10 +30,9 @@ class PerDayTransactionLimiter(BaseLimiter):
     def __init__(self, customer, transaction):
         super().__init__(customer, transaction)
 
-    def validate(self):
-        from main import aggregated_storage
+    def validate(self, customer_aggregated):
 
-        _, total_count = aggregated_storage.get(
+        _, total_count = customer_aggregated.get(
             self._customer.customer_id, self._transaction.timestamp
         )
         if total_count >= MAX_DAILY_LOAD_NO:
@@ -46,10 +45,9 @@ class PerDayTransactionAmountLimiter(BaseLimiter):
     def __init__(self, customer, transaction):
         super().__init__(customer, transaction)
 
-    def validate(self):
-        from main import aggregated_storage
+    def validate(self, customer_aggregated):
 
-        total_amount, _ = aggregated_storage.get(
+        total_amount, _ = customer_aggregated.get(
             self._customer.customer_id, self._transaction.timestamp
         )
         if (self._transaction.amount + Decimal(total_amount)) > MAX_DAILY_LOAD_AMOUNT:
@@ -60,12 +58,11 @@ class PerWeekTransactionAmountLimiter(BaseLimiter):
     def __init__(self, customer, transaction):
         super().__init__(customer, transaction)
 
-    def validate(self):
-        from main import aggregated_storage
+    def validate(self, customer_aggregated):
 
         amount_list = []
         for date in week_date_range(self._transaction.timestamp.date()):
-            amount, _ = aggregated_storage.get(self._customer.customer_id, date)
+            amount, _ = customer_aggregated.get(self._customer.customer_id, date)
             if amount:
                 amount_list.append(Decimal(amount))
 
